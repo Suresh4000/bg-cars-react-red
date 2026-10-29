@@ -102,6 +102,8 @@ model User {
   bookingsCreated   Booking[]       @relation("BookingCreatedBy")
   jobsCreated       JobCard[]       @relation("JobCardCreatedBy")
   assignedJobs      JobCard[]       @relation("JobAssignedMechanic")
+  locationAccess    UserLocationAccess[]
+  refreshSessions   RefreshSession[]
 
   @@index([organizationId, role, isActive])
   @@index([primaryLocationId, role])

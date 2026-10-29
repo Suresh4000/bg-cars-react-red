@@ -41,6 +41,7 @@ function publicUser(user) {
 }
 
 async function issueSession(user, response, oldSessionId = null) {
+  const accessToken = createAccessToken(user);
   const refreshToken = createRefreshToken();
   const expiresAt = new Date(Date.now() + refreshLifetimeMs);
   await prisma.$transaction(async (tx) => {
@@ -50,7 +51,7 @@ async function issueSession(user, response, oldSessionId = null) {
     });
   });
   response.cookie(refreshCookieName, refreshToken, cookieOptions);
-  return { accessToken: createAccessToken(user), tokenType: "Bearer", expiresIn: 900, user: publicUser(user) };
+  return { accessToken, tokenType: "Bearer", expiresIn: 900, user: publicUser(user) };
 }
 
 router.post("/login", loginLimiter, async (request, response, next) => {

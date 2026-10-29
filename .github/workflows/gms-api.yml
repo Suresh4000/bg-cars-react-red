@@ -1,0 +1,40 @@
+name: GMS API checks
+
+on:
+  push:
+    branches: [main, "feature/gms-foundation"]
+    paths:
+      - "server/**"
+      - ".github/workflows/gms-api.yml"
+  pull_request:
+    paths:
+      - "server/**"
+      - ".github/workflows/gms-api.yml"
+
+jobs:
+  api-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package.json
+      - name: Install dependencies
+        run: npm install
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+        env:
+          DATABASE_URL: postgresql://gms_user:placeholder@localhost:5432/bay_view_gms?schema=public
+      - name: Validate Prisma schema
+        run: npm run prisma:validate
+        env:
+          DATABASE_URL: postgresql://gms_user:placeholder@localhost:5432/bay_view_gms?schema=public
+      - name: Run API tests
+        run: npm test

@@ -44,18 +44,29 @@ export function requireRole(...allowedRoles) {
 }
 
 export function requireLocationAccess(getLocationId = (request) => request.params.locationId ?? request.body?.locationId ?? request.query?.locationId) {
-  return (request, response, next) => {
+  return async (request, response, next) => {
     const locationId = getLocationId(request);
     if (!locationId || typeof locationId !== "string") {
       return response.status(400).json({ error: { code: "LOCATION_REQUIRED", message: "A valid garage location is required." } });
     }
-    if (request.user.role === "SUPER_ADMIN") return next();
+    try {
+      const location = await prisma.garageLocation.findFirst({
+        where: { id: locationId, organizationId: request.user.organizationId, isActive: true },
+        select: { id: true }
+      });
+      if (!location) {
+        return response.status(404).json({ error: { code: "LOCATION_NOT_FOUND", message: "The garage location was not found." } });
+      }
+      if (request.user.role === "SUPER_ADMIN") return next();
 
-    const allowed = request.user.primaryLocationId === locationId ||
-      request.user.locationAccess.some((item) => item.locationId === locationId);
-    if (!allowed) {
-      return response.status(403).json({ error: { code: "LOCATION_FORBIDDEN", message: "You do not have access to this garage location." } });
+      const allowed = request.user.primaryLocationId === locationId ||
+        request.user.locationAccess.some((item) => item.locationId === locationId);
+      if (!allowed) {
+        return response.status(403).json({ error: { code: "LOCATION_FORBIDDEN", message: "You do not have access to this garage location." } });
+      }
+      return next();
+    } catch (error) {
+      return next(error);
     }
-    return next();
   };
 }

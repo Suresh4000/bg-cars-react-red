@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import authRoutes from "./routes/auth.js";
 
 const app = express();
 const allowedOrigins = (process.env.CLIENT_ORIGIN ?? "http://localhost:5173")
@@ -17,11 +19,13 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: "draft-7", legacyHeaders: false }));
 
 app.get("/api/health", (_request, response) => response.status(200).json({
   status: "ok", service: "bay-view-gms-api", timestamp: new Date().toISOString()
 }));
+app.use("/api/auth", authRoutes);
 
 app.use((_request, response) => response.status(404).json({
   error: { code: "NOT_FOUND", message: "The requested API route was not found." }

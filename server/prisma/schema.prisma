@@ -77,6 +77,7 @@ model GarageLocation {
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   primaryUsers   User[]
+  userAccess     UserLocationAccess[]
   bookings       Booking[]
   jobCards       JobCard[]
 
@@ -104,6 +105,28 @@ model User {
 
   @@index([organizationId, role, isActive])
   @@index([primaryLocationId, role])
+}
+
+model UserLocationAccess {
+  userId     String
+  locationId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   GarageLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, locationId])
+  @@index([locationId])
+}
+
+model RefreshSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
 
 model Customer {

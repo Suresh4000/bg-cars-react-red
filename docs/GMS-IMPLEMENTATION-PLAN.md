@@ -23,6 +23,14 @@
 7. Customer portal, HR/attendance/payroll, insurance, fleet/membership, warranty, equipment maintenance and feedback.
 8. Automated tests, security hardening, monitoring, encrypted backups, restore tests and cloud launch.
 
+## Phase 2 — Authentication and location access (implementation started)
+- Added short-lived signed access tokens and hashed, rotating refresh sessions stored in PostgreSQL.
+- Added login, refresh, logout and current-user endpoints.
+- Added active-user validation, role authorization helper and organization-scoped garage-location access helper.
+- Added a one-time bootstrap script for the initial Super Admin; it refuses to run after users exist.
+- Added tests for unauthenticated access, role restrictions and branch isolation.
+- Remaining before phase completion: confirm CI passes on the latest commit, validate the schema/migration on a local PostgreSQL instance, and review production cookie/secret configuration.
+
 ## Current foundation scope
 - Isolated Express API in server/ to avoid replacing the current website.
 - PostgreSQL/Prisma model for organization, locations, users, customers, vehicles, bookings and job cards.

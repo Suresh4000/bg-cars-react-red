@@ -18,6 +18,9 @@ Backend foundation for the multi-location garage management system.
 
 For shared or production databases, use reviewed Prisma migrations rather than `db:push`.
 
+## One-time initial administrator setup
+On a fresh database only, set the following environment variables locally: `BOOTSTRAP_ORG_NAME`, `BOOTSTRAP_LOCATION_CODE`, `BOOTSTRAP_LOCATION_NAME`, `BOOTSTRAP_ADMIN_NAME`, `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`. Use a strong unique password of at least 12 characters. Run `npm run seed:admin` once, verify the created account, then remove the bootstrap variables. The script refuses to run if any user already exists. Never put bootstrap secrets in source control or public CI logs.
+
 ## Authentication endpoints
 - `POST /api/auth/login` — accepts JSON `{ "email": "...", "password": "..." }`; returns a short-lived access token and sets an HTTP-only refresh cookie.
 - `POST /api/auth/refresh` — rotates the refresh session and returns a new access token.

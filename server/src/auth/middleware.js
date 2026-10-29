@@ -43,17 +43,20 @@ export function requireRole(...allowedRoles) {
   };
 }
 
-export function requireLocationAccess(getLocationId = (request) => request.params.locationId ?? request.body?.locationId ?? request.query?.locationId) {
+export function requireLocationAccess(
+  getLocationId = (request) => request.params.locationId ?? request.body?.locationId ?? request.query?.locationId,
+  findLocation = (locationId, organizationId) => prisma.garageLocation.findFirst({
+    where: { id: locationId, organizationId, isActive: true },
+    select: { id: true }
+  })
+) {
   return async (request, response, next) => {
     const locationId = getLocationId(request);
     if (!locationId || typeof locationId !== "string") {
       return response.status(400).json({ error: { code: "LOCATION_REQUIRED", message: "A valid garage location is required." } });
     }
     try {
-      const location = await prisma.garageLocation.findFirst({
-        where: { id: locationId, organizationId: request.user.organizationId, isActive: true },
-        select: { id: true }
-      });
+      const location = await findLocation(locationId, request.user.organizationId);
       if (!location) {
         return response.status(404).json({ error: { code: "LOCATION_NOT_FOUND", message: "The garage location was not found." } });
       }

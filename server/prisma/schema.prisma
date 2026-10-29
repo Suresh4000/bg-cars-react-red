@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  MANAGER
+  RECEPTIONIST
+  MECHANIC
+  CUSTOMER
+  HR_MANAGER
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+  CNG
+  LPG
+  OTHER
+}
+
+enum BookingStatus {
+  REQUESTED
+  CONFIRMED
+  CHECKED_IN
+  CANCELLED
+  COMPLETED
+}
+
+enum JobCardStatus {
+  OPEN
+  DIAGNOSIS
+  AWAITING_APPROVAL
+  IN_PROGRESS
+  QUALITY_CHECK
+  READY_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+model Organization {
+  id        String          @id @default(cuid())
+  name      String
+  legalName String?
+  gstin     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  locations GarageLocation[]
+  users     User[]
+  customers Customer[]
+  vehicles  Vehicle[]
+  bookings  Booking[]
+  jobCards  JobCard[]
+}
+
+model GarageLocation {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String       @default("India")
+  phone          String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  primaryUsers   User[]
+  userAccess     UserLocationAccess[]
+  bookings       Booking[]
+  jobCards       JobCard[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+}
+
+model User {
+  id                String          @id @default(cuid())
+  organizationId    String
+  primaryLocationId String?
+  fullName          String
+  email             String          @unique
+  passwordHash      String
+  role              UserRole
+  phone             String?
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  primaryLocation   GarageLocation? @relation(fields: [primaryLocationId], references: [id], onDelete: SetNull)
+  bookingsCreated   Booking[]       @relation("BookingCreatedBy")
+  jobsCreated       JobCard[]       @relation("JobCardCreatedBy")
+  assignedJobs      JobCard[]       @relation("JobAssignedMechanic")
+  locationAccess    UserLocationAccess[]
+  refreshSessions   RefreshSession[]
+
+  @@index([organizationId, role, isActive])
+  @@index([primaryLocationId, role])
+}
+
+model UserLocationAccess {
+  userId     String
+  locationId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   GarageLocation @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, locationId])
+  @@index([locationId])
+}
+
+model RefreshSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Customer {
+  id             String       @id @default(cuid())
+  organizationId String
+  fullName       String
+  email          String?
+  phone          String
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  vehicles       Vehicle[]
+  bookings       Booking[]
+  jobCards       JobCard[]
+
+  @@unique([organizationId, phone])
+  @@index([organizationId, fullName])
+  @@index([organizationId, email])
+}
+
+model Vehicle {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  customerId         String
+  registrationNumber String
+  make               String
+  model              String
+  modelYear          Int?
+  fuelType           FuelType?
+  vin                String?
+  color              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customer           Customer     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  bookings           Booking[]
+  jobCards           JobCard[]
+
+  @@unique([organizationId, registrationNumber])
+  @@index([organizationId, customerId])
+  @@index([organizationId, vin])
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  organizationId  String
+  locationId      String
+  customerId      String
+  vehicleId       String
+  createdById     String
+  scheduledAt     DateTime
+  status          BookingStatus @default(REQUESTED)
+  customerConcern String
+  internalNotes   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location        GarageLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle         Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  createdBy       User          @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  jobCard         JobCard?
+
+  @@index([organizationId, locationId, scheduledAt])
+  @@index([organizationId, status, scheduledAt])
+  @@index([customerId, createdAt])
+  @@index([vehicleId, createdAt])
+}
+
+model JobCard {
+  id                 String        @id @default(cuid())
+  organizationId     String
+  locationId         String
+  bookingId          String?       @unique
+  customerId         String
+  vehicleId          String
+  createdById        String
+  assignedMechanicId String?
+  status             JobCardStatus @default(OPEN)
+  odometerKm         Int?
+  customerConcern    String
+  diagnosis          String?
+  openedAt           DateTime      @default(now())
+  closedAt           DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  location           GarageLocation @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  booking            Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  customer           Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  vehicle            Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  createdBy          User          @relation("JobCardCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedMechanic   User?         @relation("JobAssignedMechanic", fields: [assignedMechanicId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, locationId, status])
+  @@index([assignedMechanicId, status])
+  @@index([customerId, createdAt])
+  @@index([vehicleId, createdAt])
+}
